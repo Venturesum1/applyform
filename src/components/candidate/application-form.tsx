@@ -22,6 +22,8 @@ import { applicationFormSchema, type ApplicationFormInput } from "@/lib/validati
 import { ResumeUpload } from "./resume-upload";
 import { ReviewSummary } from "./review-summary";
 import { SuccessScreen } from "./success-screen";
+import { KeySkillsPicker, type SkillLevelMap } from "./key-skills-picker";
+import type { KeySkillEntry } from "@/lib/key-skills";
 
 type Step = "editing" | "review" | "success";
 
@@ -76,10 +78,13 @@ interface FieldProps {
   required?: boolean;
   placeholder?: string;
   type?: string;
+  /** Strips disallowed characters as the user types (e.g. letters out of a phone field). */
+  sanitize?: (value: string) => string;
 }
 
-function TextField({ register, errors, name, label, required, placeholder, type = "text" }: FieldProps) {
+function TextField({ register, errors, name, label, required, placeholder, type = "text", sanitize }: FieldProps) {
   const error = errors[name]?.message as string | undefined;
+  const { onChange, ...registered } = register(name);
   return (
     <div className="space-y-1.5">
       <Label htmlFor={name}>
@@ -90,7 +95,13 @@ function TextField({ register, errors, name, label, required, placeholder, type 
         type={type}
         placeholder={placeholder}
         aria-invalid={!!error}
-        {...register(name)}
+        {...registered}
+        onChange={(event) => {
+          if (sanitize) {
+            event.target.value = sanitize(event.target.value);
+          }
+          return onChange(event);
+        }}
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
@@ -137,7 +148,7 @@ function SelectField({ control, errors, name, label, required, placeholder, opti
         control={control}
         name={name}
         render={({ field }) => (
-          <Select value={field.value || undefined} onValueChange={field.onChange}>
+          <Select value={field.value} onValueChange={field.onChange}>
             <SelectTrigger id={name} className="w-full" aria-invalid={!!error}>
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
@@ -191,6 +202,7 @@ export function ApplicationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitError, setSubmitError] = useState<string>();
+  const [skillLevels, setSkillLevels] = useState<SkillLevelMap>({});
 
   const form = useForm<ApplicationFormInput>({
     resolver: zodResolver(applicationFormSchema),
@@ -198,6 +210,10 @@ export function ApplicationForm() {
     mode: "onBlur",
   });
   const { register, control, formState, handleSubmit, setError } = form;
+
+  const selectedKeySkills: KeySkillEntry[] = Object.entries(skillLevels)
+    .filter((entry): entry is [string, KeySkillEntry["level"]] => Boolean(entry[1]))
+    .map(([skill, level]) => ({ skill, level }));
 
   function goToReview(values: ApplicationFormInput) {
     if (!resumeFile) {
@@ -227,6 +243,7 @@ export function ApplicationForm() {
       for (const [key, value] of Object.entries(reviewData)) {
         formData.append(key, value ?? "");
       }
+      formData.append("keySkills", JSON.stringify(selectedKeySkills));
       formData.append("resume", resumeFile);
 
       const { status, body } = await submitWithProgress("/api/applications", formData, setUploadProgress);
@@ -288,7 +305,15 @@ export function ApplicationForm() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <TextField register={register} errors={formState.errors} name="fullName" label="Full Name" required />
               <TextField register={register} errors={formState.errors} name="email" label="Email" type="email" required />
-              <TextField register={register} errors={formState.errors} name="phone" label="Phone Number" type="tel" required />
+              <TextField
+                register={register}
+                errors={formState.errors}
+                name="phone"
+                label="Phone Number"
+                type="tel"
+                required
+                sanitize={(value) => value.replace(/[^0-9+()\s-]/g, "")}
+              />
               <TextField register={register} errors={formState.errors} name="currentLocation" label="Current Location" required />
               <TextField register={register} errors={formState.errors} name="linkedinUrl" label="LinkedIn URL" placeholder="https://linkedin.com/in/..." />
               <TextField register={register} errors={formState.errors} name="githubUrl" label="GitHub URL" placeholder="https://github.com/..." />
@@ -341,6 +366,14 @@ export function ApplicationForm() {
                 required
                 placeholder="e.g. React, Node.js, Python"
               />
+
+              <KeySkillsPicker
+                value={skillLevels}
+                onChange={(skill, level) =>
+                  setSkillLevels((prev) => ({ ...prev, [skill]: level }))
+                }
+              />
+
               <TextAreaField
                 register={register}
                 errors={formState.errors}
@@ -399,7 +432,7 @@ export function ApplicationForm() {
 
       {step === "review" && reviewData && resumeFile && (
         <>
-          <ReviewSummary values={reviewData} resumeFile={resumeFile} />
+          <ReviewSummary values={reviewData} resumeFile={resumeFile} keySkills={selectedKeySkills} />
 
           {isSubmitting && (
             <div className="space-y-1.5">

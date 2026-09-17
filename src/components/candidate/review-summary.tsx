@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { FileText } from "lucide-react";
 import type { ApplicationFormInput } from "@/lib/validation/application";
+import type { KeySkillEntry } from "@/lib/key-skills";
 
 interface ReviewSummaryProps {
   values: ApplicationFormInput;
   resumeFile: File;
+  keySkills: KeySkillEntry[];
 }
 
 function Field({ label, value }: { label: string; value?: string }) {
@@ -26,7 +28,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export function ReviewSummary({ values, resumeFile }: ReviewSummaryProps) {
+export function ReviewSummary({ values, resumeFile, keySkills }: ReviewSummaryProps) {
   return (
     <div className="space-y-8">
       <Section title="Personal information">
@@ -55,6 +57,23 @@ export function ReviewSummary({ values, resumeFile }: ReviewSummaryProps) {
         <Field label="Computer vision experience" value={values.computerVisionExperience} />
         <Field label="Relevant projects" value={values.relevantProjects} />
       </Section>
+
+      {keySkills.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Key skills</h3>
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {keySkills.map(({ skill, level }) => (
+              <li
+                key={skill}
+                className="flex items-center justify-between gap-2 rounded-lg border border-input bg-muted/30 px-3 py-2 text-sm"
+              >
+                <span className="text-foreground">{skill}</span>
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">{level}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="space-y-4">
         <h3 className="text-sm font-semibold text-foreground">Application</h3>

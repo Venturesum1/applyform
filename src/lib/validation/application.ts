@@ -44,10 +44,10 @@ export const applicationFormSchema = z.object({
 
   // Technical information
   primarySkills: z.string().trim().min(1, "Primary skills are required").max(1000),
-  programmingLanguages: optionalText(1000),
-  mlAiExperience: optionalText(2000),
-  computerVisionExperience: optionalText(2000),
-  relevantProjects: optionalText(3000),
+  programmingLanguages: z.string().trim().min(1, "Programming languages are required").max(1000),
+  mlAiExperience: z.string().trim().min(1, "ML / AI experience is required").max(2000),
+  computerVisionExperience: z.string().trim().min(1, "Computer vision experience is required").max(2000),
+  relevantProjects: z.string().trim().min(1, "Relevant projects are required").max(3000),
 
   // Application
   coverLetter: optionalText(5000),

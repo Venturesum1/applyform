@@ -10,7 +10,8 @@ import { useEffect } from "react";
  * discourages casual snooping.
  */
 function isBlockedShortcut(event: KeyboardEvent): boolean {
-  const key = event.key.toLowerCase();
+  const key = event.key?.toLowerCase();
+  if (!key) return false;
 
   if (key === "f12") return true;
 
